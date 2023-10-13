@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" type="text/css" href="styles.css" /> 
+    <title>CS 436</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.js"></script>
+  </head>
+  <body>
+	
+
+<h1>Jenkins API Chart Website - Group 6 </h1>
+
+<div class="graph1">
+  <canvas id="lastBuild"></canvas>
+  <button onclick="runBuild()">Run Build</button>
+</div>
+
+<div class="graph2">
+  <canvas id="pastBuilds"></canvas>
+</div>
+<script>
+function runBuild() {
+
+
+$.ajax({
+  url: 'http://13.57.29.10:8080/job/Test%20Project/build?token=testtoken',
+  type: 'POST',
+  headers: {'Authorization': 'Basic ' + btoa('cs436:1196952bb1a14bced4cf6a6435945afb33')},
+  success: function() {
+    console.log('Good');
+  },
+  error: function() {
+    console.log('error.');
+  }
+});
+} 
+
+//var numTests;
+
+$.ajax({
+  url : 'http://13.57.29.10:8080/job/Test%20Project/lastBuild/testReport/api/json',
+  type:'GET',
+  dataType: 'json',
+  headers: {'Authorization': 'Basic ' + btoa('cs436:1196952bb1a14bced4cf6a6435945afb33')}
+}).done(function(testData){
+    //console.log(data);
+
+    //console.log("Done");
+    //console.log(numTests);
+    var numTestPass = testData.totalCount - (testData.failCount + testData.skipCount);
+    var numFail = testData.failCount;
+    var numSkip = testData.skipCount;
+
+    var pie = document.getElementById('lastBuild').getContext('2d');
+    var lastBuild = new Chart(pie, {
+    type: 'pie',
+    data: 
+      {
+        labels: ['Pass', 'Fail', 'Skip'],
+        datasets: [{
+          label: "Last Build",
+          data: [numTestPass, numFail, numSkip],
+          backgroundColor: [
+            'rgb(0, 132, 80)',
+            'rgb(184, 29, 19)',
+            'rgb(239, 183, 0)'
+          ],
+          borderColor: 'rgb(0, 0, 0)',
+          hoverOffset: 4
+        }]
+      },
+    });
+}).fail(function(error){
+    console.log(error);
+    console.log("Fail");
+});
+</script>
+<script>
+$.ajax({
+  url : 'http://13.57.29.10:8080/job/Test%20Project/api/json',
+  type:'GET',
+  dataType: 'json',
+  headers: {'Authorization': 'Basic ' + btoa('cs436:1196952bb1a14bced4cf6a6435945afb33')}
+}).done(function(data){
+    var buildID = [];
+    var numPass = [];
+    var numFail = [];
+    var numSkip = [];
+
+
+    for (let  i = 0; i < 5; i++){
+
+      buildID.push(data.builds[i].number);
+
+      $.ajax({
+        url : data.builds[i].url + 'testReport/api/json',
+        type:'GET',
+        dataType: 'json',
+        headers: {'Authorization': 'Basic ' + btoa('cs436:1196952bb1a14bced4cf6a6435945afb33')}
+      }).done(function(testData){
+      console.log(testData);
+
+        //const testData = data.actions[4];
+        numPass.push(testData.totalCount - (testData.failCount + testData.skipCount));
+        numFail.push(testData.failCount);
+        numSkip.push(testData.skipCount);
+
+      }).fail(function(error){
+          console.log(error);
+          console.log("Fail");
+      });
+    }
+
+    var stackedBar = document.getElementById('pastBuilds').getContext('2d');
+    var pastBuilds = new Chart(stackedBar, {
+    type: 'bar',
+    data: 
+      {
+        labels: buildID,
+        datasets: [
+          {
+            label: "Passed Tests",
+            data: numPass,
+            //data: [4, 3, 2],
+            backgroundColor: 'rgb(0, 132, 80)'
+          },
+          {
+            label: "Failed Tests",
+            data: numFail,
+            //data: [1, 6, 7],
+            backgroundColor: 'rgb(184, 29, 19)'
+          },
+          {
+            label: "Skipped Tests",
+            data: numSkip,
+            //data: [8, 4, 1],
+            backgroundColor: 'rgb(239, 183, 0)'
+          }
+        ]
+      },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          stacked: true,
+          ticks: {
+            min: 0
+          }
+        },
+        y: {
+          stacked: true,
+        }
+      }
+    }
+    });
+    setTimeout(hideData, 500);
+    function hideData(){ pastBuilds.data.datasets.forEach(function(ds) {
+      ds.hidden = !ds.hidden;
+
+      });
+      pastBuilds.update();
+    }
+    setTimeout(showData, 500);
+    function showData(){ pastBuilds.data.datasets.forEach(function(ds) {
+    ds.hidden = !ds.hidden;
+    });
+    pastBuilds.update();
+  }
+}).fail(function(error){
+    console.log(error);
+    console.log("Fail");
+});
+
+//create chart
+
+</script>
+
+  </body>
+</html>
